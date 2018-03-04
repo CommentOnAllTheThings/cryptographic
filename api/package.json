@@ -1,0 +1,27 @@
+{
+  "name": "cryptographicapi",
+  "version": "0.0.1",
+  "description": "The API component for the Cryptographic site, to retrieve and return Cryptocurrency prices.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CommentOnAllTheThings/cryptographic.git"
+  },
+  "keywords": [
+    "cryptographic",
+    "cryptocurrency"
+  ],
+  "author": "Timothy Pham",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CommentOnAllTheThings/cryptographic/issues"
+  },
+  "homepage": "https://github.com/CommentOnAllTheThings/cryptographic#readme",
+  "dependencies": {
+    "hapi": "^17.2.1",
+    "nes": "^7.0.3"
+  }
+}
