@@ -17,4 +17,6 @@ const exchanges = {
 };
 
 // Export configuration
-module.exports = exchanges;
+module.exports = {
+    exchanges: exchanges
+};
