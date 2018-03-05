@@ -174,14 +174,17 @@ async function start() {
             path: '/status',
             config: {
                 id: 'status',
-                handler: (request, h) => {
-                    influx.query(`SELECT count(*) AS number_records FROM ${dbConfig[0].table};`).then(results => {
-                        return {
-                            'status': 'operational',
-                            'results': results
-                        };
-                    });
-                }
+                handler: (request, h) => influx.query(`SELECT count(*) AS number_records FROM ${dbConfig[0].table};`).then((results) => {
+                    return {
+                        'status': 'operational',
+                        'results': results
+                    };
+                }).catch((error) => {
+                    return {
+                        'status': 'operational',
+                        'results': 'error'
+                    };
+                })
             }
         });
 
