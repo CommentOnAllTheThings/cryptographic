@@ -175,9 +175,17 @@ async function start() {
             config: {
                 id: 'status',
                 handler: (request, h) => influx.query(`SELECT COUNT(transaction_id) as number_rows FROM ${dbConfig[0].table};`).then((results) => {
+                    // Get number of rows
+                    let numberRows = 0;
+                    if (!isEmpty(results[0]) &&
+                        results[0].number_rows !== null &&
+                        results[0].number_rows !== undefined) {
+                        numberRows = results[0].number_rows;
+                    }
+
                     return {
                         'status': 'operational',
-                        'results': results
+                        'results': numberRows,
                     };
                 }).catch((error) => {
                     return {
