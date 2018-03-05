@@ -202,7 +202,7 @@ async function start() {
             path: '/last',
             config: {
                 id: 'lastTrades',
-                handler: (request, h) => influx.query(`SELECT exchange, pair, action, unit, price FROM ${dbConfig[0].table} GROUP BY pair ORDER BY time DESC LIMIT 10;`).then((results) => {
+                handler: (request, h) => influx.query(`SELECT exchange, pair, action, unit, price FROM '${dbConfig[0].table}' ORDER BY time DESC LIMIT 10;`).then((results) => {
                     return {
                         'results': results,
                     };
