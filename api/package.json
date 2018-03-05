@@ -21,9 +21,9 @@
   },
   "homepage": "https://github.com/CommentOnAllTheThings/cryptographic#readme",
   "dependencies": {
-    "basho-riak-client": "^2.4.0",
     "gdax": "^0.6.0",
     "hapi": "^17.2.1",
+    "influx": "^5.0.7",
     "nes": "^7.0.3"
   }
 }

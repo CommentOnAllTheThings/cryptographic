@@ -5,8 +5,8 @@ const Hapi = require('hapi');
 const Nes = require('nes');
 const readline = require('readline');
 
-// Load the Riak client
-const Riak = require('basho-riak-client');
+// Load the Influx client
+const Influx = require('influx');
 
 // Include Cryptocurrency exchange libraries
 const Gdax = require('gdax');
@@ -65,11 +65,7 @@ function terminate() {
                     // Close database server connection
                     if (!webSocketData.hasOwnProperty('database') || isEmpty(webSocketData.database)) {
                         console.log('Closing database connection.');
-                        webSocketData.database.stop((err, rslt) => {
-                            if (!isEmpty(err)) {
-                                console.log('Error encountered while closing database connection: ' + err);
-                            }
-                        });
+                        // TODO: Add cleanup for database
                     }
 
                     break;
@@ -108,27 +104,69 @@ async function start() {
 
         // Get first entry
         if (isEmpty(dbConfig[0]) || // Check for config
-            isEmpty(dbConfig[0].ip) || // Check for IP
-            isEmpty(dbConfig[0].port) || // Check for port
-            isEmpty(dbConfig[0].table)) { // Check for table
+            isEmpty(dbConfig[0].host) || // Check for IP
+            isEmpty(dbConfig[0].port) || // Check for Port
+            isEmpty(dbConfig[0].username) || // Check for Username
+            isEmpty(dbConfig[0].password) || // Check for Password
+            isEmpty(dbConfig[0].database) || // Check for Database
+            isEmpty(dbConfig[0].table)) { // Check for Table
             console.log('Missing database configuration parameter(s) in configuration file.');
             return;
         }
 
-        // Get table name
-        let dbTable = dbConfig[0].table;
+        // Initialize Influx
+        const influx = new Influx.InfluxDB({
+            host: dbConfig[0].host,
+            port: dbConfig[0].port,
+            username: dbConfig[0].username,
+            password: dbConfig[0].password,
+            database: dbConfig[0].database,
+            schema: [
+                {
+                    measurement: dbConfig[0].table,
+                    fields: {
+                        // The exchange identifier
+                        exchange: Influx.FieldType.STRING,
 
-        // Build connection string
-        let dbConnectionStr = `${dbConfig[0].ip}:${dbConfig[0].port}`;
+                        // The exchange transaction unique identifier (ie. unique id)
+                        transaction_id: Influx.FieldType.STRING,
+
+                        // The currency pairing (ie. XXX-YYY)
+                        pair: Influx.FieldType.STRING,
+
+                        // The first currency pairing (ie. XXX in XXX-YYY)
+                        sourcePair: Influx.FieldType.STRING,
+
+                        // The second currency pairing (ie. YYY in XXX-YYY)
+                        destinationPair: Influx.FieldType.STRING,
+
+                        // The action (ie. buy or sell)
+                        action: Influx.FieldType.STRING,
+
+                        // The unit (ie. how many were traded (bought/sold)?)
+                        unit: Influx.FieldType.FLOAT,
+
+                        // The price (in $)
+                        price: Influx.FieldType.FLOAT,
+
+                        // The timestamp reported by the exchange
+                        exchange_timestamp: Influx.FieldType.STRING,
+                    },
+                    tags: [
+                        'host'
+                    ]
+                }
+            ]
+        });
 
         // Register hapines plugin
         await apiServer.register(Nes);
 
         // Create the possible subscriptions (ie. /{cryptocurrency}/{currency} -- Cryptocurrency TO Currency)
-        apiServer.subscription('/btc/{currency}'); // Bitcoin-Currency
-        apiServer.subscription('/bch/{currency}'); // Bitcoin Cash-Currency
-        apiServer.subscription('/eth/{currency}'); // Ethereum-Currency
-        apiServer.subscription('/ltc/{currency}'); // Litecoin-Currency
+        apiServer.subscription('/BTC/{currency}'); // Bitcoin-Currency
+        apiServer.subscription('/BCH/{currency}'); // Bitcoin Cash-Currency
+        apiServer.subscription('/ETH/{currency}'); // Ethereum-Currency
+        apiServer.subscription('/LTC/{currency}'); // Litecoin-Currency
 
         // Start the server
         await apiServer.start();
@@ -143,39 +181,18 @@ async function start() {
             return;
         }
 
-        // Connect to database server
-        new Riak.Client([dbConnectionStr], (error, client) => {
-            if (isEmpty(error)) {
-                // TODO: Figure out how to call StartTls to initiate a secure connection to Riak
-                if (!isEmpty(client)) {
-                    let tableCreateQuery = "CREATE TABLE " + dbTable + " ( \
-                        sequence SINT64 NOT NULL, \
-                        exchange VARCHAR NOT NULL, \
-                        currency_pair VARCHAR NOT NULL, \
-                        action VARCHAR NOT NULL, \
-                        size DOUBLE NOT NULL, \
-                        price DOUBLE NOT NULL, \
-                        trade_time TIMESTAMP NOT NULL, \
-                        PRIMARY KEY ( \
-                            (sequence, QUANTUM(trade_time, 15, 'm')), \
-                            sequence, trade_time \
-                        )\
-                    );";
-
-                    // Create table
-                    let cmd = new Riak.Commands.TS.Query.Builder()
-                        .withQuery(tableCreateQuery)
-                        .withCallback((error, result) => {
-                            // Handle error
-                            if (!isEmpty(error)) {
-                                console.log('Riak Create Table Error: ' + error);
-                            }
-                        })
-                        .build();
-
-                    client.execute(cmd);
+        // Initialize database
+        influx.getDatabaseNames()
+            .then(names => {
+                // Check if database exists
+                if (!names.includes(dbConfig[0].database)) {
+                    // Create it, since it doesn't exist
+                    console.log(`Creating database ${dbConfig[0].database}`);
+                    return influx.createDatabase(dbConfig[0].database);
                 }
-
+            })
+            .then(() => {
+                // All ready to go!
                 // Subscribe to exchange feeds
                 for (let exchangeName in exchanges) {
                     if (exchanges.hasOwnProperty(exchangeName)) {
@@ -233,7 +250,7 @@ async function start() {
                                                 wsClients.gdax = {
                                                     ws: gdaxWebsocket,
                                                     subscriptions: subscriptions,
-                                                    database: client,
+                                                    database: influx,
                                                 };
 
                                                 // Handlers for the GDAX WebSocket
@@ -253,37 +270,36 @@ async function start() {
                                                                 return;
                                                             }
 
-                                                            // TODO: Determine table structure and data to be saved to the database
-                                                            let row = [
-                                                                [
-                                                                    Number.parseInt(data.sequence),
-                                                                    exchangeName.toLowerCase(),
-                                                                    data.product_id.toUpperCase(),
-                                                                    data.side.toLowerCase(),
-                                                                    Number.parseFloat(data.last_size),
-                                                                    Number.parseFloat(data.price),
-                                                                    Date.parse(data.time) // Convert ISO 8601 to timestamp
-                                                                ]
-                                                            ];
-
-                                                            console.log(row);
-
-                                                            // Store the trade if Riak is available
-                                                            if (!isEmpty(client) && row.length > 0) {
-                                                                let cmd = new Riak.Commands.TS.Store.Builder()
-                                                                    .withTable(dbTable)
-                                                                    .withRows(row)
-                                                                    .withCallback((error, result) => {
-                                                                        // Handle error
-                                                                        if (!isEmpty(error)) {
-                                                                            console.log('Riak Command Error: ' + error);
-                                                                        } else {
-                                                                            console.log(result);
-                                                                        }
-                                                                    })
-                                                                    .build();
-
-                                                                client.execute(cmd);
+                                                            // Split the pairing by "-"
+                                                            // So example BCH-USD becomes BCH and USD
+                                                            let pairings = data.product_id.split('-');
+                                                            if (pairings.length > 1 && // Need at least two components to get the crypto pair
+                                                                pairings[0].length > 0 && // Make sure source pair is not empty
+                                                                pairings[1].length > 0) { // Make sure destination pair is not empty
+                                                                // Save to database
+                                                                influx.writePoints([
+                                                                    {
+                                                                        measurement: dbConfig[0].table,
+                                                                        tags: { host: dbConfig[0].host },
+                                                                        fields: {
+                                                                            exchange: exchangeName.toLowerCase(),
+                                                                            transaction_id: Number.parseInt(data.sequence),
+                                                                            pair: data.product_id.toUpperCase(),
+                                                                            sourcePair: pairings[0].toUpperCase(),
+                                                                            destinationPair: pairings[1].toUpperCase(),
+                                                                            action: data.side.toLowerCase(),
+                                                                            unit: Number.parseFloat(data.last_size),
+                                                                            price: Number.parseFloat(data.price),
+                                                                            exchange_timestamp: data.time,
+                                                                        },
+                                                                    }
+                                                                ]).then((result) => {
+                                                                    // TODO: Handle Success
+                                                                    console.log(result);
+                                                                }).catch((error) => {
+                                                                    // TODO: Handle Error
+                                                                    console.log(`Influx error while writing point ${error}`);
+                                                                });
                                                             }
                                                         } else if (data.type === 'heartbeat') {
                                                             // TODO: Verify that trades were all retrieved
@@ -291,16 +307,15 @@ async function start() {
                                                     }
                                                 });
                                                 gdaxWebsocket.on('error', (error) => {
-                                                    // TODO: Log errors
                                                     console.log('Error returned from GDAX WebSocket: ' + error);
                                                 });
                                             } else {
                                                 console.log('No valid Cryptocurrency pairs found.');
                                             }
                                         }
-                                    }).catch((err) => {
-                                        console.log('Error returned from GDAX Public Client: ' + error);
-                                    });
+                                    }).catch((error) => {
+                                    console.log('Error returned from GDAX Public Client: ' + error);
+                                });
                                 break;
                             default:
                                 console.log('Exchange "' + exchangeName + '" not implemented');
@@ -329,12 +344,10 @@ async function start() {
                             break;
                     }
                 }).on('close', terminate); // User hit CTRL+C or input stream killed
-            } else {
-                // Terminate
-                console.log('Riak Client Error: ' + error);
-                process.exit(1);
-            }
-        });
+            })
+            .catch(err => {
+                console.error(`Could not create Influx database: ${err}`);
+            });
     }
     catch (err) {
         console.log('Error was encountered', err);

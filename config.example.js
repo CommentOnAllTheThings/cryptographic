@@ -16,13 +16,16 @@ const exchanges = {
     // TODO: Add more exchanges at a later time...
 };
 
-// The configuration for Riak TS
+// The configuration for Influx
 const database = {
     // For local we only have one node
     '0': {
-        'ip': '127.0.0.1',
-        'port': '8087',
-        'table': 'TradeData',
+        'host': '127.0.0.1',
+        'port': 8086,
+        'username': 'influx',
+        'password': 'test',
+        'database': 'cryptographic_trade_data',
+        'table': 'market_trades',
     }
 };
 
