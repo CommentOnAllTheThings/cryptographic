@@ -146,6 +146,10 @@ async function start() {
         // Connect to database server
         new Riak.Client([dbConnectionStr], (error, client) => {
             if (isEmpty(error)) {
+                Riak.Commands.TS.StartTls((error, result) => {
+                    console.log(error);
+                });
+
                 if (!isEmpty(client)) {
                     // Create table
                     let cmd = new Riak.Commands.TS.Query.Builder()
