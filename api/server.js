@@ -168,6 +168,23 @@ async function start() {
         apiServer.subscription('/ETH/{currency}'); // Ethereum-Currency
         apiServer.subscription('/LTC/{currency}'); // Litecoin-Currency
 
+        // Add status route
+        apiServer.route({
+            method: 'GET',
+            path: '/status',
+            config: {
+                id: 'status',
+                handler: (request, h) => {
+                    influx.query(`SELECT count(*) AS number_records FROM ${dbConfig[0].table};`).then(results => {
+                        return {
+                            'status': 'operational',
+                            'results': results
+                        };
+                    });
+                }
+            }
+        });
+
         // Start the server
         await apiServer.start();
         console.log('Server running on', apiServer.info.uri, "\r\n");
