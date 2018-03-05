@@ -256,6 +256,17 @@ async function start() {
                                                     if (!isEmpty(data.type)) {
                                                         if (data.type === 'ticker') {
                                                             // Each WebSocket message only has one trade
+                                                            // Check that the ticker has an actual trade
+                                                            if (isEmpty(data.sequence) ||
+                                                                isEmpty(data.product_id) ||
+                                                                isEmpty(data.side) ||
+                                                                isEmpty(data.last_size) ||
+                                                                isEmpty(data.price) ||
+                                                                isEmpty(data.time)) {
+                                                                // Skip processing
+                                                                return;
+                                                            }
+
                                                             // TODO: Determine table structure and data to be saved to the database
                                                             let row = [
                                                                 [
