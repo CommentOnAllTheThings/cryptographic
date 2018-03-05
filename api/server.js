@@ -144,9 +144,52 @@ async function start() {
         }
 
         // Connect to database server
-        let dbClient = null;
         new Riak.Client([dbConnectionStr], (error, client) => {
             if (isEmpty(error)) {
+                // TODO: Remove test drop table below, this is only here for testing and database changes until the structure is finalized
+                if (!isEmpty(client)) {
+                    let cmd = new Riak.Commands.TS.Query.Builder()
+                        .withQuery("DROP TABLE IF EXISTS " + dbTable + ";")
+                        .withCallback((error, result) => {
+                            // Handle error
+                            if (!isEmpty(error)) {
+                                console.log('Riak Drop Table Error: ' + error);
+                            } else {
+                                console.log(result);
+                            }
+                        })
+                        .build();
+
+                    client.execute(cmd);
+
+                    // Create table
+                    cmd = new Riak.Commands.TS.Query.Builder()
+                        .withQuery("CREATE TABLE IF NOT EXISTS " + dbTable + " ( \
+                                    sequence SINT64 NOT NULL, \
+                                    exchange VARCHAR NOT NULL, \
+                                    currency_pair VARCHAR NOT NULL, \
+                                    action VARCHAR NOT NULL, \
+                                    size DOUBLE NOT NULL, \
+                                    price DOUBLE NOT NULL, \
+                                    trade_time TIMESTAMP NOT NULL \
+                                    PRIMARY KEY ( \
+                                        (sequence, QUANTUM(trade_time, 15, 'm')), \
+                                        sequence, trade_time \
+                                    );"
+                        )
+                        .withCallback((error, result) => {
+                            // Handle error
+                            if (!isEmpty(error)) {
+                                console.log('Riak Create Table Error: ' + error);
+                            } else {
+                                console.log(result);
+                            }
+                        })
+                        .build();
+
+                    client.execute(cmd);
+                }
+
                 // Subscribe to exchange feeds
                 for (let exchangeName in exchanges) {
                     if (exchanges.hasOwnProperty(exchangeName)) {
@@ -216,6 +259,13 @@ async function start() {
                                                             // TODO: Determine table structure and data to be saved to the database
                                                             let row = [
                                                                 [
+                                                                    data.sequence,
+                                                                    exchangeName.toLowerCase(),
+                                                                    data.product_id.toUpperCase(),
+                                                                    data.side.toLowerCase(),
+                                                                    data.last_size,
+                                                                    data.price,
+                                                                    Date.parse(data.time) // Convert ISO 8601 to timestamp
                                                                 ]
                                                             ];
 
@@ -225,8 +275,12 @@ async function start() {
                                                                     .withTable(dbTable)
                                                                     .withRows(row)
                                                                     .withCallback((error, result) => {
-                                                                        // TODO: Handle error
-                                                                        console.log('Riak Command Error: ' + error);
+                                                                        // Handle error
+                                                                        if (!isEmpty(error)) {
+                                                                            console.log('Riak Command Error: ' + error);
+                                                                        } else {
+                                                                            console.log(result);
+                                                                        }
                                                                     })
                                                                     .build();
 
