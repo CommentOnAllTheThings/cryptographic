@@ -276,6 +276,17 @@ async function start() {
                                                             if (pairings.length > 1 && // Need at least two components to get the crypto pair
                                                                 pairings[0].length > 0 && // Make sure source pair is not empty
                                                                 pairings[1].length > 0) { // Make sure destination pair is not empty
+                                                                // Send updates to clients via WebSocket
+                                                                apiServer.publish(
+                                                                    `/${pairings[0].toUpperCase()}/${pairings[1].toUpperCase()}`,
+                                                                    {
+                                                                        exchange: exchangeName.toLowerCase(),
+                                                                        action: data.side.toLowerCase(),
+                                                                        unit: Number.parseFloat(data.last_size),
+                                                                        price: Number.parseFloat(data.price),
+                                                                    }
+                                                                );
+
                                                                 // Save to database
                                                                 influx.writePoints([
                                                                     {
@@ -295,7 +306,6 @@ async function start() {
                                                                     }
                                                                 ]).then((result) => {
                                                                     // TODO: Handle Success
-                                                                    console.log(result);
                                                                 }).catch((error) => {
                                                                     // TODO: Handle Error
                                                                     console.log(`Influx error while writing point ${error}`);
