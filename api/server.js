@@ -157,7 +157,7 @@ async function start() {
                                     action VARCHAR NOT NULL, \
                                     size DOUBLE NOT NULL, \
                                     price DOUBLE NOT NULL, \
-                                    trade_time TIMESTAMP NOT NULL \
+                                    trade_time TIMESTAMP NOT NULL, \
                                     PRIMARY KEY ( \
                                         (sequence, QUANTUM(trade_time, 15, 'm')), \
                                         sequence, trade_time \
