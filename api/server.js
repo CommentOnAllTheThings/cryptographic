@@ -161,7 +161,8 @@ async function start() {
                                     PRIMARY KEY ( \
                                         (sequence, QUANTUM(trade_time, 15, 'm')), \
                                         sequence, trade_time \
-                                    );"
+                                    )\
+                                );"
                         )
                         .withCallback((error, result) => {
                             // Handle error
