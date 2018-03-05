@@ -162,8 +162,6 @@ async function start() {
                         )\
                     );";
 
-                    console.log(tableCreateQuery);
-
                     // Create table
                     let cmd = new Riak.Commands.TS.Query.Builder()
                         .withQuery(tableCreateQuery)
@@ -171,8 +169,6 @@ async function start() {
                             // Handle error
                             if (!isEmpty(error)) {
                                 console.log('Riak Create Table Error: ' + error);
-                            } else {
-                                console.log(result);
                             }
                         })
                         .build();
@@ -260,15 +256,17 @@ async function start() {
                                                             // TODO: Determine table structure and data to be saved to the database
                                                             let row = [
                                                                 [
-                                                                    data.sequence,
+                                                                    Number.parseInt(data.sequence),
                                                                     exchangeName.toLowerCase(),
                                                                     data.product_id.toUpperCase(),
                                                                     data.side.toLowerCase(),
-                                                                    data.last_size,
-                                                                    data.price,
+                                                                    Number.parseFloat(data.last_size),
+                                                                    Number.parseFloat(data.price),
                                                                     Date.parse(data.time) // Convert ISO 8601 to timestamp
                                                                 ]
                                                             ];
+
+                                                            console.log(row);
 
                                                             // Store the trade if Riak is available
                                                             if (!isEmpty(client) && row.length > 0) {
