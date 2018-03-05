@@ -99,7 +99,7 @@ async function start() {
         // Check for database configuration information
         if (isEmpty(dbConfig)) {
             console.log('No database configuration parameters specified in configuration file.');
-            return;
+            process.exit(1);
         }
 
         // Get first entry
@@ -111,7 +111,7 @@ async function start() {
             isEmpty(dbConfig[0].database) || // Check for Database
             isEmpty(dbConfig[0].table)) { // Check for Table
             console.log('Missing database configuration parameter(s) in configuration file.');
-            return;
+            process.exit(1);
         }
 
         // Initialize Influx
@@ -178,7 +178,7 @@ async function start() {
         // Check for exchange configuration information
         if (isEmpty(exchanges)) {
             console.log('No exchanges specified in configuration file.');
-            return;
+            process.exit(1);
         }
 
         // Initialize database
@@ -347,6 +347,7 @@ async function start() {
             })
             .catch(err => {
                 console.error(`Could not create Influx database: ${err}`);
+                process.exit(1);
             });
     }
     catch (err) {
