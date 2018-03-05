@@ -148,22 +148,25 @@ async function start() {
             if (isEmpty(error)) {
                 // TODO: Figure out how to call StartTls to initiate a secure connection to Riak
                 if (!isEmpty(client)) {
+                    let tableCreateQuery = "CREATE TABLE " + dbTable + " ( \
+                        sequence SINT64 NOT NULL, \
+                        exchange VARCHAR NOT NULL, \
+                        currency_pair VARCHAR NOT NULL, \
+                        action VARCHAR NOT NULL, \
+                        size DOUBLE NOT NULL, \
+                        price DOUBLE NOT NULL, \
+                        trade_time TIMESTAMP NOT NULL, \
+                        PRIMARY KEY ( \
+                            (sequence, QUANTUM(trade_time, 15, 'm')), \
+                            sequence, trade_time \
+                        )\
+                    );";
+
+                    console.log(tableCreateQuery);
+
                     // Create table
                     let cmd = new Riak.Commands.TS.Query.Builder()
-                        .withQuery("CREATE TABLE " + dbTable + " ( \
-                                    sequence SINT64 NOT NULL, \
-                                    exchange VARCHAR NOT NULL, \
-                                    currency_pair VARCHAR NOT NULL, \
-                                    action VARCHAR NOT NULL, \
-                                    size DOUBLE NOT NULL, \
-                                    price DOUBLE NOT NULL, \
-                                    trade_time TIMESTAMP NOT NULL, \
-                                    PRIMARY KEY ( \
-                                        (sequence, QUANTUM(trade_time, 15, 'm')), \
-                                        sequence, trade_time \
-                                    )\
-                                );"
-                        )
+                        .withQuery(tableCreateQuery)
                         .withCallback((error, result) => {
                             // Handle error
                             if (!isEmpty(error)) {
