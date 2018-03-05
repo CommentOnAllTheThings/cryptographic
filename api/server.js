@@ -196,6 +196,24 @@ async function start() {
             }
         });
 
+        // Add last trade route
+        apiServer.route({
+            method: 'GET',
+            path: '/last',
+            config: {
+                id: 'lastTrades',
+                handler: (request, h) => influx.query(`SELECT * FROM ${dbConfig[0].table} GROUP BY pair ORDER BY time DESC;`).then((results) => {
+                    return {
+                        'results': results,
+                    };
+                }).catch((error) => {
+                    return {
+                        'results': 'error'
+                    };
+                })
+            }
+        });
+
         // Start the server
         await apiServer.start();
         console.log('Server running on', apiServer.info.uri, "\r\n");
