@@ -146,25 +146,10 @@ async function start() {
         // Connect to database server
         new Riak.Client([dbConnectionStr], (error, client) => {
             if (isEmpty(error)) {
-                // TODO: Remove test drop table below, this is only here for testing and database changes until the structure is finalized
                 if (!isEmpty(client)) {
-                    let cmd = new Riak.Commands.TS.Query.Builder()
-                        .withQuery("DROP TABLE IF EXISTS " + dbTable + ";")
-                        .withCallback((error, result) => {
-                            // Handle error
-                            if (!isEmpty(error)) {
-                                console.log('Riak Drop Table Error: ' + error);
-                            } else {
-                                console.log(result);
-                            }
-                        })
-                        .build();
-
-                    client.execute(cmd);
-
                     // Create table
-                    cmd = new Riak.Commands.TS.Query.Builder()
-                        .withQuery("CREATE TABLE IF NOT EXISTS " + dbTable + " ( \
+                    let cmd = new Riak.Commands.TS.Query.Builder()
+                        .withQuery("CREATE TABLE " + dbTable + " ( \
                                     sequence SINT64 NOT NULL, \
                                     exchange VARCHAR NOT NULL, \
                                     currency_pair VARCHAR NOT NULL, \
@@ -251,7 +236,7 @@ async function start() {
                                                 };
 
                                                 // Handlers for the GDAX WebSocket
-                                                gdaxWebsocket.on('message', data => {
+                                                gdaxWebsocket.on('message', (data) => {
                                                     // Filter to only display ticker
                                                     if (!isEmpty(data.type)) {
                                                         if (data.type === 'ticker') {
@@ -302,8 +287,9 @@ async function start() {
                                                         }
                                                     }
                                                 });
-                                                gdaxWebsocket.on('error', err => {
+                                                gdaxWebsocket.on('error', (error) => {
                                                     // TODO: Log errors
+                                                    console.log('Error returned from GDAX WebSocket: ' + error);
                                                 });
                                             } else {
                                                 console.log('No valid Cryptocurrency pairs found.');
