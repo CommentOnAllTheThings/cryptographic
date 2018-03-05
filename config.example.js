@@ -16,7 +16,18 @@ const exchanges = {
     // TODO: Add more exchanges at a later time...
 };
 
+// The configuration for Riak TS
+const database = {
+    // For local we only have one node
+    '0': {
+        'ip': '127.0.0.1',
+        'port': '8087',
+        'table': 'TradeData',
+    }
+};
+
 // Export configuration
 module.exports = {
-    exchanges: exchanges
+    exchanges: exchanges,
+    database: database,
 };
