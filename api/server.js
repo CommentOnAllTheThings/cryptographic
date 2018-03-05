@@ -174,7 +174,7 @@ async function start() {
             path: '/status',
             config: {
                 id: 'status',
-                handler: (request, h) => influx.query(`SELECT COUNT(time) FROM ${dbConfig[0].table};`).then((results) => {
+                handler: (request, h) => influx.query(`SELECT COUNT(transaction_id) as number_rows FROM ${dbConfig[0].table};`).then((results) => {
                     return {
                         'status': 'operational',
                         'results': results
