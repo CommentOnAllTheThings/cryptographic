@@ -4,6 +4,8 @@
   "description": "The app component for the Cryptographic site, to retrieve and display beautiful Cryptocurrency graphs (hopefully).",
   "private": true,
   "dependencies": {
+    "@types/nes": "^7.0.5",
+    "nes": "^7.0.3",
     "react": "^16.2.0",
     "react-dom": "^16.2.0",
     "react-scripts-ts": "2.13.0"
