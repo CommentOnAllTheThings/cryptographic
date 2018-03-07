@@ -330,6 +330,8 @@ async function start() {
                                                                         action: data.side.toLowerCase(),
                                                                         unit: Number.parseFloat(data.last_size),
                                                                         price: Number.parseFloat(data.price),
+                                                                        sourcePair: pairings[0].toUpperCase(),
+                                                                        destinationPair: pairings[1].toUpperCase(),
                                                                     }
                                                                 );
 
